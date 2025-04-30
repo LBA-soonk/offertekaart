@@ -30,6 +30,7 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: 'OpenStreetMap contributors'
     }).addTo(map);
+
     const gebouwen = [];
     const gebouwLayerGroup = L.geoJSON(null, {
       style: () => ({ color: 'black', fillColor: 'grey', fillOpacity: 0.3 }),
@@ -48,12 +49,14 @@
         gebouwen.push(layer);
       }
     }).addTo(map);
+
     function resetStijlen() {
       gebouwen.forEach(g => {
         g.isSelected = false;
         g.setStyle({ color: 'black', fillColor: 'grey', fillOpacity: 0.3 });
       });
     }
+
     function selecteerGebouwenBinnenBuffer(bufferGeoJSON) {
       gebouwen.forEach(g => {
         let gebouwGeoJSON = g.toGeoJSON();
@@ -67,11 +70,14 @@
         }
       });
     }
+
     async function laadBAGGebouwen(bbox) {
-      const url = `https://geodata.nationaalgeoregister.nl/bag/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&bbox=${bbox.join(',')},EPSG:4326`;
-      console.log('Opvragen BAG gebouwen van URL:', url);
+      const origineleUrl = `https://geodata.nationaalgeoregister.nl/bag/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&bbox=${bbox.join(',')},EPSG:4326`;
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(origineleUrl)}`;
+      console.log('Opvragen BAG via proxy URL:', proxyUrl);
+
       try {
-        const response = await fetch(url);
+        const response = await fetch(proxyUrl);
         if (!response.ok) throw new Error('HTTP-fout bij ophalen BAG-data: ' + response.status);
         const data = await response.json();
         console.log('Gebouwen geladen:', data);
@@ -83,6 +89,7 @@
         alert('Er ging iets mis bij het ophalen van de BAG-gegevens. Zie de console voor details.');
       }
     }
+
     const drawnItems = new L.FeatureGroup().addTo(map);
     const drawControl = new L.Control.Draw({
       draw: {
@@ -93,11 +100,10 @@
         marker: false,
         circlemarker: false
       },
-      edit: {
-        featureGroup: drawnItems
-      }
+      edit: { featureGroup: drawnItems }
     });
     map.addControl(drawControl);
+
     map.on(L.Draw.Event.CREATED, async e => {
       const layer = e.layer;
       drawnItems.clearLayers();
@@ -110,6 +116,7 @@
       await laadBAGGebouwen(bounds);
       selecteerGebouwenBinnenBuffer(buffered);
     });
+
     function downloadMap() {
       domtoimage.toPng(document.getElementById('map')).then(dataUrl => {
         const link = document.createElement('a');
